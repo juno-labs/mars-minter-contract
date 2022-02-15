@@ -2,9 +2,8 @@ import { program } from "commander";
 import dayjs from "dayjs";
 import assert from "assert";
 import fs from "fs";
-import { Gas, NEAR } from "near-workspaces-ava";
 
-const { keyStores, connect, transactions } = require("near-api-js");
+const { keyStores, connect, transactions, utils } = require("near-api-js");
 const path = require("path");
 const homedir = require("os").homedir();
 
@@ -96,7 +95,7 @@ const deployAndInitializeContract = async (env, accountId, wasmPath) => {
     description:
       "Dragon Nation is an exclusive collection of 3,000 Dragon NFTs on the NEAR blockchain.",
     size: 3000,
-    base_cost: NEAR.parse("0.1 N"),
+    base_cost: utils.format.parseNearAmount("0.1"),
     royalties,
     initial_royalties,
     premint_start_epoch: epochNext060sec,
@@ -111,7 +110,7 @@ const deployAndInitializeContract = async (env, accountId, wasmPath) => {
         transactions.functionCall(
           "new_default_meta",
           initialData,
-          Gas.parse("20 TGas")
+          "200000000000000"
         ),
       ],
     });
@@ -161,7 +160,7 @@ const whitelistAccount = async (
       contractId,
       methodName: "add_whitelist_account",
       args: { account_id: accountId, allowance },
-      gas: Gas.parse("30Tgas"),
+      gas: "30000000000000",
     });
   } else {
     return;
