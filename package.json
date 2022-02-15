@@ -5,6 +5,7 @@
   "scripts": {
     "build": "cargo build --target wasm32-unknown-unknown --release",
     "test": "ava --timeout=5m",
+    "test:ci": "yarn build && ava --timeout=5m",
     "test:testnet": "NEAR_WORKSPACES_NETWORK=testnet yarn test"
   },
   "devDependencies": {

@@ -19,4 +19,4 @@ jobs:
         with:
           node-version: "16"
       - name: Run tests
-        run: yarn && yarn test
+        run: yarn && yarn test:ci
