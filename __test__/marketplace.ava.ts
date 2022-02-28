@@ -7,7 +7,7 @@ import {
   nftTokensForOwner,
   printBalance,
   totalCost,
-} from "./beyondUtils";
+} from "./marsMinterUtils";
 
 function getRoyalties({ root, person_b, person_c }) {
   return {
@@ -46,10 +46,14 @@ const runner = Workspace.init(
     const person_a = await root.createAccount("person_a");
     const person_c = await root.createAccount("person_c");
     const royalties = getRoyalties({ root, person_b, person_c });
-    const beyond = await deploy(root, "beyond", { royalties });
-    const token_id = await mint(beyond, person_a, await totalCost(beyond, 1));
+    const marsMinter = await deploy(root, "mars_minter", { royalties });
+    const token_id = await mint(
+      marsMinter,
+      person_a,
+      await totalCost(marsMinter, 1)
+    );
 
-    const paras = await delpoyParas(root, root, root, [beyond]);
+    const paras = await delpoyParas(root, root, root, [marsMinter]);
 
     await person_a.call(
       paras,
@@ -65,7 +69,7 @@ const runner = Workspace.init(
       ft_token_ids: "near",
     });
     await person_a.call(
-      beyond,
+      marsMinter,
       "nft_approve",
       {
         token_id,
@@ -76,20 +80,20 @@ const runner = Workspace.init(
         attachedDeposit: ONE_NEAR,
       }
     );
-    return { beyond, paras, person_c, person_a, person_b };
+    return { marsMinter, paras, person_c, person_a, person_b };
   }
 );
 
 runner.test(
   "buy one",
-  async (t, { root, beyond, paras, person_a, person_c, person_b }) => {
+  async (t, { root, marsMinter, paras, person_a, person_c, person_b }) => {
     const person_a2 = await root.createAccount("person_a2");
-    const ids = await nftTokensForOwner(person_a, beyond);
+    const ids = await nftTokensForOwner(person_a, marsMinter);
     t.is(ids.length, 1);
     const token_id = ids[0].token_id;
     t.log(
       await paras.view("get_market_data", {
-        nft_contract_id: beyond.accountId,
+        nft_contract_id: marsMinter.accountId,
         token_id,
       })
     );
@@ -110,7 +114,7 @@ runner.test(
       paras,
       "buy",
       {
-        nft_contract_id: beyond,
+        nft_contract_id: marsMinter,
         token_id,
       },
       {
@@ -134,7 +138,7 @@ runner.test(
       `Expected EVENT_JSON got ${res.logs}`
     );
     t.log(res.logs);
-    t.log(await nftTokensForOwner(person_a2, beyond));
+    t.log(await nftTokensForOwner(person_a2, marsMinter));
     const newBalance = await root.availableBalance();
     t.assert(newBalance.gt(balance));
     t.log(newBalance.sub(balance).toHuman());

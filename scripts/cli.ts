@@ -12,7 +12,7 @@ const CREDENTIALS_DIR = ".near-credentials";
 program.version("0.0.2");
 
 const EMPTY_WASM_PATH = "./scripts/empty.wasm";
-const BEYOND_WASM_PATH = "./scripts/beyond.wasm";
+const MARS_MINTER_WASM_PATH = "./scripts/mars_minter.wasm";
 
 const nodeUrlMap = {
   mainnet: "https://rpc.mainnet.near.org",
@@ -181,9 +181,9 @@ programCommand("deploy_empty_contract").action(async (options) => {
   process.exit(0);
 });
 
-programCommand("deploy_beyond_contract").action(async (options) => {
+programCommand("deploy_mars_minter_contract").action(async (options) => {
   const { env, accountId } = options;
-  await deployAndInitializeContract(env, accountId, BEYOND_WASM_PATH);
+  await deployAndInitializeContract(env, accountId, MARS_MINTER_WASM_PATH);
   process.exit(0);
 });
 

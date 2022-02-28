@@ -30,18 +30,21 @@ export const printBalance = async (t, user: NearAccount) => {
 export async function userMintsNFTs(
   t,
   user: NearAccount,
-  beyond,
+  marsMinter,
   num,
   shouldFail: boolean = false,
   printRootCost: boolean = false
 ) {
-  const numPriorHoldings = (await nftTokensForOwner(user, beyond)).length;
+  const numPriorHoldings = (await nftTokensForOwner(user, marsMinter)).length;
   const method = num == 1 ? "nft_mint_one" : "nft_mint_many";
   let args = num == 1 ? {} : { num };
-  const cost = await totalCost(beyond, num);
+  const cost = await totalCost(marsMinter, num);
 
   if (printRootCost) {
-    t.log("Cost for root to mint", (await totalCost(beyond, num)).toHuman());
+    t.log(
+      "Cost for root to mint",
+      (await totalCost(marsMinter, num)).toHuman()
+    );
   }
 
   t.log(
@@ -50,7 +53,7 @@ export async function userMintsNFTs(
   const userBalanceBefore = (await user.balance()).available.toHuman();
   t.log(`Balance Before: ${userBalanceBefore}`);
   try {
-    const res = await user.call_raw(beyond, method, args, {
+    const res = await user.call_raw(marsMinter, method, args, {
       attachedDeposit: cost,
       gas: MINT_ONE_GAS,
     });
@@ -60,11 +63,11 @@ export async function userMintsNFTs(
     );
     t.is(
       num,
-      (await nftTokensForOwner(user, beyond)).length - numPriorHoldings
+      (await nftTokensForOwner(user, marsMinter)).length - numPriorHoldings
     );
   } catch (error) {
     t.assert(shouldFail);
-    t.is(numPriorHoldings, (await nftTokensForOwner(user, beyond)).length);
+    t.is(numPriorHoldings, (await nftTokensForOwner(user, marsMinter)).length);
   }
   const userBalanceAfter = (await user.balance()).available.toHuman();
   t.log(`Balance After: ${userBalanceAfter}`);
@@ -175,15 +178,15 @@ const binPath = (name: string): string => {
 
 export function deploy(
   owner: NearAccount,
-  name = "beyond",
+  name = "mars_minter",
   args = {}
 ): Promise<NearAccount> {
   return owner.createAndDeploy(name, binPath(name), {
     method: "new_default_meta",
     args: {
       owner_id: owner,
-      name: "BEYOND NFT",
-      symbol: "BEYOND",
+      name: "MARS MINTER NFT",
+      symbol: "MMN",
       uri: "https://bafybeidq7nu5pxsiy2cext6qtxxygpifhunxco25mtrabfge2rf6lxdax4.ipfs.dweb.link/",
       size: 100,
       base_cost: NEAR.parse("1 N"),
@@ -195,11 +198,11 @@ export function deploy(
 
 export async function nftTokensForOwner(
   root,
-  beyond,
+  marsMinter,
   from_index = null,
   limit = null
 ) {
-  return beyond.view("nft_tokens_for_owner", {
+  return marsMinter.view("nft_tokens_for_owner", {
     account_id: root,
     from_index,
     limit,
@@ -207,21 +210,21 @@ export async function nftTokensForOwner(
 }
 
 export async function costPerToken(
-  beyond: NearAccount,
+  marsMinter: NearAccount,
   num: number
 ): Promise<NEAR> {
-  return NEAR.from(await beyond.view("cost_per_token", { num }));
+  return NEAR.from(await marsMinter.view("cost_per_token", { num }));
 }
 
 export async function totalCost(
-  beyond: NearAccount,
+  marsMinter: NearAccount,
   num: number
 ): Promise<NEAR> {
-  return NEAR.from(await beyond.view("total_cost", { num }));
+  return NEAR.from(await marsMinter.view("total_cost", { num }));
 }
 
-export async function tokenStorageCost(beyond: NearAccount): Promise<NEAR> {
-  return NEAR.from(await beyond.view("token_storage_cost"));
+export async function tokenStorageCost(marsMinter: NearAccount): Promise<NEAR> {
+  return NEAR.from(await marsMinter.view("token_storage_cost"));
 }
 
 export const MINT_ONE_GAS = Gas.parse("300 TGas");
@@ -234,12 +237,12 @@ export async function getTokens(
 }
 
 export async function mint(
-  beyond: NearAccount,
+  marsMinter: NearAccount,
   root: NearAccount,
   attachedDeposit = ONE_NEAR
 ): Promise<string> {
   let res = await root.call_raw(
-    beyond,
+    marsMinter,
     "nft_mint_one",
     {},
     {

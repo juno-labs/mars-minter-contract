@@ -10,7 +10,7 @@ import {
   tokenStorageCost,
   totalCost,
   userMintsNFTs,
-} from "./beyondUtils";
+} from "./marsMinterUtils";
 
 const base_cost = NEAR.parse("5 N");
 
@@ -59,15 +59,19 @@ const runner = Workspace.init(
     };
 
     await printBalance(console, person_c);
-    const beyond = await deploy(person_c, "beyond", ndnDefaultMetaArgs);
+    const marsMinter = await deploy(
+      person_c,
+      "mars_minter",
+      ndnDefaultMetaArgs
+    );
     await printBalance(console, person_c);
-    return { beyond, person_b, person_a, person_c };
+    return { marsMinter, person_b, person_a, person_c };
   }
 );
 
-runner.test("can get cost per token", async (t, { beyond }) => {
-  const cost = await costPerToken(beyond, 1);
-  const storageCost = await tokenStorageCost(beyond);
+runner.test("can get cost per token", async (t, { marsMinter }) => {
+  const cost = await costPerToken(marsMinter, 1);
+  const storageCost = await tokenStorageCost(marsMinter);
   t.log(
     "One token costs " +
       cost.toHuman() +
@@ -78,28 +82,28 @@ runner.test("can get cost per token", async (t, { beyond }) => {
 
   t.log(
     `Const per token for 24 is: ${await (
-      await costPerToken(beyond, 24)
+      await costPerToken(marsMinter, 24)
     ).toHuman()}`
   );
 
   t.deepEqual(cost.toBigInt(), base_cost.add(storageCost).toBigInt());
   if (cost.toBigInt() > 0) {
-    t.assert(cost.gte(await costPerToken(beyond, 24)));
+    t.assert(cost.gte(await costPerToken(marsMinter, 24)));
   }
 });
 
-async function assertXTokens(t, root: NearAccount, beyond, num) {
+async function assertXTokens(t, root: NearAccount, marsMinter, num) {
   const method = num == 1 ? "nft_mint_one" : "nft_mint_many";
   let args = num == 1 ? {} : { num };
-  const cost = await totalCost(beyond, num);
+  const cost = await totalCost(marsMinter, num);
 
   t.log(`${num} token costs ` + cost.toHuman());
-  const res = await root.call_raw(beyond, method, args, {
+  const res = await root.call_raw(marsMinter, method, args, {
     attachedDeposit: cost,
     gas: MINT_ONE_GAS,
   });
   t.true(res.succeeded, [res.Failure, ...res.promiseErrorMessages].join("\n"));
-  t.is(num, (await nftTokensForOwner(root, beyond)).length);
+  t.is(num, (await nftTokensForOwner(root, marsMinter)).length);
 }
 
 [
@@ -108,8 +112,8 @@ async function assertXTokens(t, root: NearAccount, beyond, num) {
   ["five", 5],
   ["ten", 10],
 ].forEach(async ([num, x]) => {
-  runner.test("mint " + num, async (t, { root, beyond }) => {
-    await assertXTokens(t, root, beyond, x);
+  runner.test("mint " + num, async (t, { root, marsMinter }) => {
+    await assertXTokens(t, root, marsMinter, x);
   });
 });
 
@@ -118,48 +122,48 @@ async function assertXTokens(t, root: NearAccount, beyond, num) {
   ["two", 2],
   ["ten", 10],
 ].forEach(async ([num, x]) => {
-  runner.test("person_b mints " + num, async (t, { person_b, beyond }) => {
-    await userMintsNFTs(t, person_b, beyond, x);
+  runner.test("person_b mints " + num, async (t, { person_b, marsMinter }) => {
+    await userMintsNFTs(t, person_b, marsMinter, x);
   });
 });
 
-async function getDetailedViewOfNFT(t, user: NearAccount, beyond) {
-  await userMintsNFTs(t, user, beyond, 1);
-  const nftList = await nftTokensForOwner(user, beyond);
+async function getDetailedViewOfNFT(t, user: NearAccount, marsMinter) {
+  await userMintsNFTs(t, user, marsMinter, 1);
+  const nftList = await nftTokensForOwner(user, marsMinter);
   const singleNFTMetadata = nftList[0];
   t.log({ singleNFTMetadata });
-  const collectionMetadata = await beyond.view("nft_metadata");
+  const collectionMetadata = await marsMinter.view("nft_metadata");
   t.log({ collectionMetadata });
 }
 
-runner.test("detailed view of NFT ", async (t, { person_a, beyond }) => {
-  await getDetailedViewOfNFT(t, person_a, beyond);
+runner.test("detailed view of NFT ", async (t, { person_a, marsMinter }) => {
+  await getDetailedViewOfNFT(t, person_a, marsMinter);
 });
 
 async function mintingAllNFTs(
   t,
   root: NearAccount,
   deployer: NearAccount,
-  beyond
+  marsMinter
 ) {
   const whale = await createNewAccount(t, root, "whale", "2000 N");
   for (let i = 0; i < 10; i++) {
-    await userMintsNFTs(t, whale, beyond, 10);
-    const tokens_left = await beyond.view("tokens_left");
+    await userMintsNFTs(t, whale, marsMinter, 10);
+    const tokens_left = await marsMinter.view("tokens_left");
     t.log(`Number of tokens left: ${tokens_left}`);
     await printBalance(t, deployer);
   }
 
   t.log(
-    `Number of Holdings: ${(await nftTokensForOwner(whale, beyond)).length}`
+    `Number of Holdings: ${(await nftTokensForOwner(whale, marsMinter)).length}`
   );
 
   const method = "nft_mint_one";
-  const cost = await totalCost(beyond, 1);
+  const cost = await totalCost(marsMinter, 1);
 
   try {
     await whale.call_raw(
-      beyond,
+      marsMinter,
       method,
       {},
       {
@@ -172,15 +176,18 @@ async function mintingAllNFTs(
     t.assert(true);
   }
 
-  t.is(100, (await nftTokensForOwner(whale, beyond)).length);
+  t.is(100, (await nftTokensForOwner(whale, marsMinter)).length);
 
-  const mintedNFTs = await nftTokensForOwner(whale, beyond);
+  const mintedNFTs = await nftTokensForOwner(whale, marsMinter);
   const tokenIdList = mintedNFTs
     .map((nft) => nft?.token_id)
     .sort((a, b) => parseInt(a) - parseInt(b));
   t.log({ tokenIdList });
 }
 
-runner.test("Try minting all NFTs", async (t, { root, person_c, beyond }) => {
-  await mintingAllNFTs(t, root, person_c, beyond);
-});
+runner.test(
+  "Try minting all NFTs",
+  async (t, { root, person_c, marsMinter }) => {
+    await mintingAllNFTs(t, root, person_c, marsMinter);
+  }
+);

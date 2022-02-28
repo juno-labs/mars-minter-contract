@@ -1,4 +1,4 @@
-# Beyond Contract
+# Mars Minter Contract
 
 # Setup
 

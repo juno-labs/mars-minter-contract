@@ -1,10 +1,10 @@
 {
-  "name": "beyond-contract",
+  "name": "mars_minter_contract",
   "version": "0.1.0",
   "license": "MIT",
   "scripts": {
     "build": "cargo build --target wasm32-unknown-unknown --release",
-    "test": "ava --timeout=5m",
+    "test": "yarn build && ava --timeout=5m",
     "test:ci": "yarn build && ava --timeout=5m",
     "test:testnet": "NEAR_WORKSPACES_NETWORK=testnet yarn test"
   },

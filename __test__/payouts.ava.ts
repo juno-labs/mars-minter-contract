@@ -1,6 +1,6 @@
 import { NEAR } from "near-units";
 import { NearAccount, Workspace } from "near-workspaces-ava";
-import { deploy, getDelta, mint, totalCost } from "./beyondUtils";
+import { deploy, getDelta, mint, totalCost } from "./marsMinterUtils";
 
 if (Workspace.networkIsSandbox()) {
   function createRoyalties({ root, person_b, person_a, person_c }) {
@@ -26,22 +26,22 @@ if (Workspace.networkIsSandbox()) {
     async ({ root }) => {
       const [person_a, person_b, person_c] = await subaccounts(root);
       const royalties = createRoyalties({ root, person_a, person_b, person_c });
-      const beyond = await deploy(root, "beyond", {
+      const marsMinter = await deploy(root, "mars_minter", {
         royalties,
         initial_royalties: royalties,
         base_cost: NEAR.parse("5 N"),
       });
-      return { beyond, person_a, person_b, person_c };
+      return { marsMinter, person_a, person_b, person_c };
     }
   );
 
   runner.test(
     "Get Payout",
-    async (t, { root, beyond, person_c, person_b, person_a }) => {
+    async (t, { root, marsMinter, person_c, person_b, person_a }) => {
       const balance = NEAR.parse("500 N");
-      const cost = await totalCost(beyond, 1);
-      const token_id = await mint(beyond, root, cost);
-      const payouts = await beyond.view("nft_payout", {
+      const cost = await totalCost(marsMinter, 1);
+      const token_id = await mint(marsMinter, root, cost);
+      const payouts = await marsMinter.view("nft_payout", {
         token_id,
         balance,
         max_len_payout: 10,
@@ -67,11 +67,11 @@ if (Workspace.networkIsSandbox()) {
     }
   );
 
-  runner.test("Initial Payout", async (t, { root, beyond, person_c }) => {
+  runner.test("Initial Payout", async (t, { root, marsMinter, person_c }) => {
     let charlie = await root.createAccount("charlie");
-    const cost = await totalCost(beyond, 1);
+    const cost = await totalCost(marsMinter, 1);
     let [delta, token_id] = await getDelta(t, person_c, async () =>
-      mint(beyond, charlie, cost)
+      mint(marsMinter, charlie, cost)
     );
     t.log(
       cost.toHuman(),
