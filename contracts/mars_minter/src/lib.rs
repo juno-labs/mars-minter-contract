@@ -121,6 +121,28 @@ impl Contract {
         }
     }
 
+    pub fn update_metadata(
+        &mut self,
+        name: String,
+        symbol: String,
+        uri: String,
+        icon: Option<String>,
+        spec: Option<String>,
+        reference: Option<String>,
+        reference_hash: Option<Base64VecU8>,
+    ) {
+        self.assert_owner();
+        self.metadata.set(&NFTContractMetadata {
+            spec: spec.unwrap_or(NFT_METADATA_SPEC.to_string()),
+            name,
+            symbol,
+            icon,
+            base_uri: Some(uri),
+            reference,
+            reference_hash,
+        });
+    }
+
     pub fn add_whitelist_account(&mut self, account_id: AccountId, allowance: u32) {
         self.assert_owner();
         self.whitelist.insert(&account_id, &allowance);
@@ -199,6 +221,10 @@ impl Contract {
 
     pub fn get_mint_start_epoch(&self) -> u64 {
         self.mint_start_epoch
+    }
+
+    pub fn get_premint_start_epoch(&self) -> u64 {
+        self.premint_start_epoch
     }
 
     pub fn nft_metadata(&self) -> NFTContractMetadata {
