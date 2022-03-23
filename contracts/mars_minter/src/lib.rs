@@ -3,6 +3,7 @@ use near_contract_standards::non_fungible_token::{
     refund_deposit_to_account, NearEvent, NonFungibleToken, Token, TokenId,
 };
 use near_sdk::{
+    assert_one_yocto,
     borsh::{self, BorshDeserialize, BorshSerialize},
     collections::{LazyOption, LookupMap},
     env,
@@ -30,6 +31,8 @@ pub struct Contract {
     royalties: LazyOption<Royalties>,
     initial_royalties: LazyOption<Royalties>,
     whitelist: LookupMap<AccountId, u32>,
+    token_id_to_media: LookupMap<String, String>,
+    token_id_to_reference: LookupMap<String, String>,
 }
 
 #[derive(BorshSerialize, BorshStorageKey)]
@@ -43,6 +46,8 @@ enum StorageKey {
     Royalties,
     InitialRoyalties,
     Whitelist,
+    TokenIdToMedia,
+    TokenIdToReference,
 }
 
 #[near_bindgen]
@@ -118,6 +123,8 @@ impl Contract {
                 initial_royalties.as_ref(),
             ),
             whitelist: LookupMap::new(StorageKey::Whitelist),
+            token_id_to_media: LookupMap::new(StorageKey::TokenIdToMedia),
+            token_id_to_reference: LookupMap::new(StorageKey::TokenIdToReference),
         }
     }
 
@@ -132,6 +139,49 @@ impl Contract {
 
     pub fn get_wl_allowance(&self, account_id: AccountId) -> u32 {
         self.get_whitelist_allowance(&account_id)
+    }
+
+    // Functions to add and remove media and reference URIs
+    /// Edit functions
+    #[payable]
+    pub fn add_media_uri(&mut self, token_id: TokenId, uri: String) {
+        self.assert_owner();
+        assert_one_yocto();
+        self.token_id_to_media.insert(&token_id, &uri);
+    }
+
+    #[payable]
+    pub fn add_reference_uri(&mut self, token_id: TokenId, uri: String) {
+        self.assert_owner();
+        assert_one_yocto();
+        self.token_id_to_reference.insert(&token_id, &uri);
+    }
+
+    #[payable]
+    pub fn remove_media_uri(&mut self, token_id: TokenId) {
+        self.assert_owner();
+        assert_one_yocto();
+        self.token_id_to_media.remove(&token_id);
+    }
+
+    #[payable]
+    pub fn remove_reference_uri(&mut self, token_id: TokenId) {
+        self.assert_owner();
+        assert_one_yocto();
+        self.token_id_to_reference.remove(&token_id);
+    }
+
+    /// Get functions
+    pub fn get_token_media(&self, token_id: &TokenId) -> String {
+        self.token_id_to_media
+            .get(token_id)
+            .unwrap_or_else(|| panic!("Media not found for token {}", token_id))
+    }
+
+    pub fn get_token_reference(&self, token_id: &TokenId) -> String {
+        self.token_id_to_reference
+            .get(token_id)
+            .unwrap_or_else(|| panic!("Reference not found for token {}", token_id))
     }
 
     #[payable]
@@ -308,8 +358,16 @@ impl Contract {
     }
 
     fn create_metadata(&mut self, token_id: &String) -> TokenMetadata {
-        let media = Some(format!("{}.png", token_id));
-        let reference = Some(format!("{}.json", token_id));
+        let media = Some(
+            self.token_id_to_media
+                .get(&token_id)
+                .unwrap_or(format!("{}.png", token_id)),
+        );
+        let reference = Some(
+            self.token_id_to_reference
+                .get(&token_id)
+                .unwrap_or(format!("{}.json", token_id)),
+        );
         let title = Some(format!("{}", token_id));
         TokenMetadata {
             title,
