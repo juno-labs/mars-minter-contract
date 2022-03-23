@@ -184,6 +184,34 @@ impl Contract {
             .unwrap_or_else(|| panic!("Reference not found for token {}", token_id))
     }
 
+    // Update the URIs of existing tokens
+    #[payable]
+    pub fn update_one_token(
+        &mut self,
+        token_id: TokenId,
+        media_uri: String,
+        reference_uri: String,
+    ) {
+        self.assert_owner();
+        assert_one_yocto();
+        let mut current_token_metadata = self
+            .tokens
+            .token_metadata_by_id
+            .as_ref()
+            .unwrap()
+            .get(&token_id)
+            .expect("Token not found");
+
+        current_token_metadata.media = Some(media_uri);
+        current_token_metadata.media_hash = None;
+        current_token_metadata.reference = Some(reference_uri);
+        current_token_metadata.reference_hash = None;
+        self.tokens
+            .token_metadata_by_id
+            .as_mut()
+            .and_then(|by_id| by_id.insert(&token_id, &current_token_metadata));
+    }
+
     #[payable]
     pub fn nft_mint(
         &mut self,
