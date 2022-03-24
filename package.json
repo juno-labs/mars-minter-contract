@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "license": "MIT",
   "scripts": {
-    "build": "cargo build --target wasm32-unknown-unknown --release",
+    "build": "cargo build --target wasm32-unknown-unknown --release && cp ./target/wasm32-unknown-unknown/release/mars_minter.wasm ./scripts/mars_minter.wasm",
     "test": "yarn build && ava --timeout=5m",
     "test:ci": "yarn build && ava --timeout=5m",
     "test:testnet": "NEAR_WORKSPACES_NETWORK=testnet yarn test"
